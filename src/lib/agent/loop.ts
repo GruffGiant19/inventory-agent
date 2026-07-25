@@ -13,7 +13,7 @@ import {
 } from "./tools";
 
 const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
+  apiKey: process.env.OPENROUTER_API_KEY!,
 });
 
 const OWNER_ID = process.env.SUPABASE_OWNER_ID ?? "";
@@ -50,7 +50,7 @@ async function dispatchTool(
   toolName: string,
   toolInput: Record<string, unknown>,
   customerPhone: string,
-  ownerId: string
+  ownerId: string,
 ): Promise<string> {
   try {
     switch (toolName) {
@@ -78,7 +78,7 @@ async function dispatchTool(
       case "check_stock": {
         const result = await checkStock(
           toolInput.product_id as string,
-          toolInput.quantity as number
+          toolInput.quantity as number,
         );
         return JSON.stringify(result);
       }
@@ -86,7 +86,7 @@ async function dispatchTool(
       case "reserve_stock": {
         const result = await reserveStock(
           toolInput.product_id as string,
-          toolInput.quantity as number
+          toolInput.quantity as number,
         );
         return JSON.stringify(result);
       }
@@ -101,7 +101,7 @@ async function dispatchTool(
             unit_price: number;
           }>,
           toolInput.status as string,
-          toolInput.delivery_address as string | undefined
+          toolInput.delivery_address as string | undefined,
         );
         return JSON.stringify(result);
       }
@@ -109,7 +109,7 @@ async function dispatchTool(
       case "request_delivery": {
         const result = await requestDelivery(
           toolInput.order_id as string,
-          toolInput.notes as string | undefined
+          toolInput.notes as string | undefined,
         );
         return JSON.stringify(result);
       }
@@ -130,7 +130,7 @@ async function dispatchTool(
 export async function runAgentLoop(
   customerPhone: string,
   inboundMessage: string,
-  ownerId: string
+  ownerId: string,
 ): Promise<string> {
   // 1. Log the inbound message
   await logConversation(customerPhone, "customer", inboundMessage);
@@ -141,7 +141,7 @@ export async function runAgentLoop(
   // 3. Load recent conversation history for context
   const history = await getConversationHistory(customerPhone, 30);
 
-  // 4. Build Anthropic messages array
+  // 4. Build OpenRouter messages array
   const messages: Anthropic.MessageParam[] = history
     .slice(0, -1) // exclude the message we just logged
     .map((msg) => ({
@@ -180,7 +180,9 @@ export async function runAgentLoop(
     if (response.stop_reason === "end_turn") {
       // Extract text reply
       const textBlock = response.content.find((b) => b.type === "text");
-      finalReply = textBlock ? textBlock.text : "Your order has been processed.";
+      finalReply = textBlock
+        ? textBlock.text
+        : "Your order has been processed.";
       continueLoop = false;
     } else if (response.stop_reason === "tool_use") {
       // Process all tool calls in this turn
@@ -192,15 +194,22 @@ export async function runAgentLoop(
         // Special case: address update (not a formal tool, handled inline)
         if (block.name === "create_order" && openOrder) {
           const input = block.input as Record<string, unknown>;
-          if (input.delivery_address && openOrder.status === "awaiting_address") {
-            await updateOrderAddress(openOrder.id, input.delivery_address as string);
+          if (
+            input.delivery_address &&
+            openOrder.status === "awaiting_address"
+          ) {
+            await updateOrderAddress(
+              openOrder.id,
+              input.delivery_address as string,
+            );
             await requestDelivery(openOrder.id);
             toolResults.push({
               type: "tool_result",
               tool_use_id: block.id,
               content: JSON.stringify({
                 success: true,
-                message: "Order confirmed with delivery address. Delivery requested.",
+                message:
+                  "Order confirmed with delivery address. Delivery requested.",
               }),
             });
             continue;
@@ -211,7 +220,7 @@ export async function runAgentLoop(
           block.name,
           block.input as Record<string, unknown>,
           customerPhone,
-          ownerId
+          ownerId,
         );
 
         toolResults.push({
@@ -226,7 +235,8 @@ export async function runAgentLoop(
     } else {
       // max_tokens or other stop — extract whatever text is there
       const textBlock = response.content.find((b) => b.type === "text");
-      finalReply = textBlock?.text ?? "Sorry, I ran into an issue. Please try again.";
+      finalReply =
+        textBlock?.text ?? "Sorry, I ran into an issue. Please try again.";
       continueLoop = false;
     }
   }
