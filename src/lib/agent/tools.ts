@@ -6,7 +6,7 @@ import type { Product } from "@/lib/supabase/types";
  * name, description, and tags. Returns top candidates.
  */
 export async function searchInventory(
-  description: string
+  description: string,
 ): Promise<{ products: Product[]; query: string }> {
   const supabase = createAdminClient();
 
@@ -24,13 +24,12 @@ export async function searchInventory(
   });
 
   if (error) {
+    console.log("[search_inventory] RPC error:", error);
     // Fallback to ILIKE if FTS errors
     const { data: fallback } = await supabase
       .from("products")
       .select("*")
-      .or(
-        `name.ilike.%${description}%,description.ilike.%${description}%`
-      )
+      .or(`name.ilike.%${description}%,description.ilike.%${description}%`)
       .gt("quantity_available", 0)
       .limit(5);
     return { products: (fallback as Product[]) ?? [], query: description };
@@ -44,7 +43,7 @@ export async function searchInventory(
  */
 export async function checkStock(
   productId: string,
-  quantity: number
+  quantity: number,
 ): Promise<{ available: boolean; current_quantity: number }> {
   const supabase = createAdminClient();
 
@@ -70,7 +69,7 @@ export async function checkStock(
  */
 export async function reserveStock(
   productId: string,
-  quantity: number
+  quantity: number,
 ): Promise<{ success: boolean; product?: Product }> {
   const supabase = createAdminClient();
 
@@ -94,13 +93,13 @@ export async function createOrder(
   customerPhone: string,
   items: Array<{ product_id: string; quantity: number; unit_price: number }>,
   status: string,
-  deliveryAddress?: string
+  deliveryAddress?: string,
 ): Promise<{ order_id: string | null; error?: string }> {
   const supabase = createAdminClient();
 
   const totalPrice = items.reduce(
     (sum, item) => sum + item.unit_price * item.quantity,
-    0
+    0,
   );
 
   const { data: order, error: orderError } = await supabase
@@ -142,7 +141,7 @@ export async function createOrder(
  */
 export async function requestDelivery(
   orderId: string,
-  notes?: string
+  notes?: string,
 ): Promise<{ success: boolean }> {
   const supabase = createAdminClient();
 
@@ -167,10 +166,12 @@ export async function requestDelivery(
 export async function logConversation(
   customerPhone: string,
   role: "customer" | "agent",
-  message: string
+  message: string,
 ): Promise<void> {
   const supabase = createAdminClient();
-  await supabase.from("conversations").insert({ customer_phone: customerPhone, role, message });
+  await supabase
+    .from("conversations")
+    .insert({ customer_phone: customerPhone, role, message });
 }
 
 /**
@@ -178,7 +179,7 @@ export async function logConversation(
  */
 export async function getConversationHistory(
   customerPhone: string,
-  limit = 20
+  limit = 20,
 ) {
   const supabase = createAdminClient();
   const { data } = await supabase
@@ -212,7 +213,7 @@ export async function findOpenOrder(customerPhone: string, ownerId: string) {
  */
 export async function updateOrderAddress(
   orderId: string,
-  deliveryAddress: string
+  deliveryAddress: string,
 ) {
   const supabase = createAdminClient();
   await supabase

@@ -43,8 +43,13 @@ export default function ProductsPage() {
   }, []);
 
   async function loadProducts() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     setUserId(user.id);
 
     const { data } = await supabase
@@ -83,7 +88,10 @@ export default function ProductsPage() {
     const payload = {
       name: form.name,
       description: form.description,
-      tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
+      tags: form.tags
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean),
       price: parseFloat(form.price),
       quantity_available: parseInt(form.quantity_available, 10),
       photo_url: form.photo_url || null,
@@ -91,7 +99,10 @@ export default function ProductsPage() {
     };
 
     if (editingProduct) {
-      await supabase.from("products").update(payload).eq("id", editingProduct.id);
+      await supabase
+        .from("products")
+        .update(payload)
+        .eq("id", editingProduct.id);
     } else {
       await supabase.from("products").insert(payload);
     }
@@ -110,7 +121,7 @@ export default function ProductsPage() {
   const filtered = products.filter(
     (p) =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.description.toLowerCase().includes(search.toLowerCase())
+      p.description.toLowerCase().includes(search.toLowerCase()),
   );
 
   if (loading) {
@@ -126,13 +137,23 @@ export default function ProductsPage() {
       <div className="page-header">
         <div>
           <div className="page-title">Products</div>
-          <div className="page-subtitle">{products.length} items in catalogue</div>
+          <div className="page-subtitle">
+            {products.length} items in catalogue
+          </div>
         </div>
         <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
           <div className="search-bar">
             <div className="search-input-wrapper">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
               <input
                 className="search-input"
@@ -142,7 +163,11 @@ export default function ProductsPage() {
               />
             </div>
           </div>
-          <button className="btn-primary" style={{ width: "auto", padding: "0.65rem 1.25rem" }} onClick={openAdd}>
+          <button
+            className="btn-primary"
+            style={{ width: "auto", padding: "0.65rem 1.25rem" }}
+            onClick={openAdd}
+          >
             + Add Product
           </button>
         </div>
@@ -177,7 +202,11 @@ export default function ProductsPage() {
                       <img
                         src={product.photo_url}
                         alt={product.name}
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                        }}
                       />
                     ) : (
                       "📦"
@@ -191,7 +220,9 @@ export default function ProductsPage() {
                     {product.tags.length > 0 && (
                       <div className="product-tags">
                         {product.tags.map((tag) => (
-                          <span key={tag} className="tag">{tag}</span>
+                          <span key={tag} className="tag">
+                            {tag}
+                          </span>
                         ))}
                       </div>
                     )}
@@ -203,7 +234,10 @@ export default function ProductsPage() {
                         {isLow && "⚠️ "}
                         {product.quantity_available} in stock
                         {isLow && (
-                          <span className="badge badge-low-stock" style={{ marginLeft: "0.4rem" }}>
+                          <span
+                            className="badge badge-low-stock"
+                            style={{ marginLeft: "0.4rem" }}
+                          >
                             Low
                           </span>
                         )}
@@ -213,10 +247,16 @@ export default function ProductsPage() {
 
                   {/* Actions */}
                   <div className="product-actions">
-                    <button className="btn-secondary" onClick={() => openEdit(product)}>
+                    <button
+                      className="btn-secondary"
+                      onClick={() => openEdit(product)}
+                    >
                       Edit
                     </button>
-                    <button className="btn-danger" onClick={() => handleDelete(product.id)}>
+                    <button
+                      className="btn-danger"
+                      onClick={() => handleDelete(product.id)}
+                    >
                       Delete
                     </button>
                   </div>
@@ -236,8 +276,16 @@ export default function ProductsPage() {
                 {editingProduct ? "Edit Product" : "Add New Product"}
               </span>
               <button className="btn-icon" onClick={() => setShowModal(false)}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
               </button>
             </div>
@@ -260,7 +308,9 @@ export default function ProductsPage() {
                     rows={3}
                     placeholder="Describe the product for the AI agent…"
                     value={form.description}
-                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, description: e.target.value })
+                    }
                     style={{ resize: "vertical" }}
                   />
                 </div>
@@ -273,7 +323,13 @@ export default function ProductsPage() {
                     onChange={(e) => setForm({ ...form, tags: e.target.value })}
                   />
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "1rem",
+                  }}
+                >
                   <div className="form-group">
                     <label className="form-label">Price (GHS)</label>
                     <input
@@ -283,7 +339,9 @@ export default function ProductsPage() {
                       min="0"
                       placeholder="0.00"
                       value={form.price}
-                      onChange={(e) => setForm({ ...form, price: e.target.value })}
+                      onChange={(e) =>
+                        setForm({ ...form, price: e.target.value })
+                      }
                       required
                     />
                   </div>
@@ -308,7 +366,9 @@ export default function ProductsPage() {
                     className="form-input"
                     placeholder="https://…"
                     value={form.photo_url}
-                    onChange={(e) => setForm({ ...form, photo_url: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, photo_url: e.target.value })
+                    }
                   />
                 </div>
               </div>
@@ -326,7 +386,11 @@ export default function ProductsPage() {
                   style={{ width: "auto", padding: "0.65rem 1.5rem" }}
                   disabled={saving}
                 >
-                  {saving ? "Saving…" : editingProduct ? "Save Changes" : "Add Product"}
+                  {saving
+                    ? "Saving…"
+                    : editingProduct
+                      ? "Save Changes"
+                      : "Add Product"}
                 </button>
               </div>
             </form>

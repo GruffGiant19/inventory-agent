@@ -11,15 +11,10 @@ BEGIN
   SELECT *
   FROM products
   WHERE
-    to_tsvector('english',
-      name || ' ' || description || ' ' || array_to_string(tags, ' ')
-    ) @@ to_tsquery('english', query_text)
+    search_vector @@ to_tsquery('english', query_text)
     AND quantity_available > 0
   ORDER BY
-    ts_rank(
-      to_tsvector('english', name || ' ' || description || ' ' || array_to_string(tags, ' ')),
-      to_tsquery('english', query_text)
-    ) DESC
+    ts_rank(search_vector, to_tsquery('english', query_text)) DESC
   LIMIT 5;
 END;
 $$ LANGUAGE plpgsql;

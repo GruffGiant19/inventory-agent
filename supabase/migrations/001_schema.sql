@@ -20,10 +20,32 @@ CREATE TABLE IF NOT EXISTS products (
   updated_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Full-text search index
-CREATE INDEX IF NOT EXISTS products_fts_idx
-  ON products
-  USING gin(to_tsvector('english', name || ' ' || description || ' ' || array_to_string(tags, ' ')));
+-- Remove the old failing functional index attempt if it partially ran
+DROP INDEX IF EXISTS products_fts_idx;
+
+-- Add a dedicated tsvector column
+ALTER TABLE products ADD COLUMN IF NOT EXISTS search_vector tsvector;
+
+-- Trigger function to keep it in sync on insert/update
+CREATE OR REPLACE FUNCTION products_search_vector_update()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.search_vector :=
+    to_tsvector('english',
+      COALESCE(NEW.name, '') || ' ' ||
+      COALESCE(NEW.description, '') || ' ' ||
+      COALESCE(array_to_string(NEW.tags, ' '), '')
+    );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER products_search_vector_trigger
+  BEFORE INSERT OR UPDATE ON products
+  FOR EACH ROW EXECUTE FUNCTION products_search_vector_update();
+
+-- Now index the plain column — no expression, no IMMUTABLE issue
+CREATE INDEX products_fts_idx ON products USING gin(search_vector);
 
 -- ─── ORDERS ──────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS orders (
